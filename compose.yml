@@ -1,7 +1,7 @@
 services:
   redis:
     image: redis:8.2-rc1-alpine
-    container_name: redisense-redis-stack
+    container_name: rediguard-redis-stack
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -14,41 +14,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    network_mode: "host"
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: rediscover-backend
+  redisinsights:
+    image: redislabs/redisinsight:latest
+    container_name: rediguard-redisinsights
     restart: unless-stopped
     ports:
-      - "8000:8000"
-    environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - API_HOST=0.0.0.0
-      - API_PORT=8000
-      - ENVIRONMENT=production
-    depends_on:
-      redis:
-        condition: service_healthy
-    network_mode: "host"
-
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: rediscover-frontend
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-    depends_on:
-      - backend
-    network_mode: "host"
+      - "5540:5540"  # RedisInsight
 
 volumes:
   redis-stack-data:
