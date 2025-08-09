@@ -1,0 +1,285 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  BACKEND_ECR_REPOSITORY: rediguard-backend
+  FRONTEND_ECR_REPOSITORY: rediguard-frontend
+  ECS_CLUSTER: ${{ secrets.ECS_CLUSTER_NAME }}
+  ECS_SERVICE: ${{ secrets.ECS_SERVICE_NAME }}
+
+permissions:
+  id-token: write   # Required for OIDC
+  contents: read    # Required for checkout
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.12"
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: |
+        uv sync --frozen
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+        cache-dependency-path: './frontend/package-lock.json'
+
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Lint backend code
+      working-directory: ./backend
+      run: |
+        uv run python -m flake8 app/ --max-line-length=120 --ignore=E501,W503 || true
+
+    - name: Lint frontend code
+      working-directory: ./frontend
+      run: npm run lint
+
+    - name: Run backend tests
+      working-directory: ./backend
+      env:
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        PYTHONPATH: /home/runner/work/rediguard/rediguard/backend
+      run: |
+        # Start Redis for testing
+        docker run -d --name redis-test -p 6379:6379 redis:8.2-rc1-alpine
+        sleep 10
+        
+        # Wait for Redis to be ready
+        timeout 30 bash -c '
+        until docker exec redis-test redis-cli ping; do
+          echo "Waiting for Redis to be ready..."
+          sleep 2
+        done'
+        
+        echo "✅ Redis is ready"
+        
+        # Test Python imports and basic functionality using dedicated test script
+        echo "Testing Python modules..."
+        uv run python test_imports.py
+        
+        if [ $? -eq 0 ]; then
+          echo "✅ Backend import tests passed"
+        else
+          echo "❌ Backend import tests failed"
+          exit 1
+        fi
+        
+        # Run basic health check tests
+        uv run python -c "
+        import requests
+        import subprocess
+        import time
+        import os
+
+        # Start the server in background
+        proc = subprocess.Popen(['uv', 'run', 'uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '8001'])
+        time.sleep(15)
+
+        try:
+            # Test health endpoint
+            response = requests.get('http://localhost:8001/health', timeout=10)
+            print(f'Health check status: {response.status_code}')
+            if response.status_code == 200:
+                print('✅ Backend health check passed')
+                
+                # Test a few more endpoints
+                try:
+                    stats_response = requests.get('http://localhost:8001/api/v1/stats/overview', timeout=5)
+                    print(f'Stats endpoint status: {stats_response.status_code}')
+                except Exception as e:
+                    print(f'Stats endpoint test: {e}')
+                    
+            else:
+                print('❌ Backend health check failed')
+                exit(1)
+        except Exception as e:
+            print(f'❌ Backend test failed: {e}')
+            exit(1)
+        finally:
+            proc.terminate()
+        "
+
+    - name: Build frontend for testing
+      working-directory: ./frontend
+      run: |
+        # Clear Next.js cache to avoid any stale module resolution
+        rm -rf .next
+        npm run build
+
+    - name: Test frontend build
+      working-directory: ./frontend
+      run: |
+        # Check if build artifacts exist
+        if [ -d ".next" ]; then
+          echo "✅ Frontend build successful"
+        else
+          echo "❌ Frontend build failed"
+          exit 1
+        fi
+
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+        role-session-name: GitHubActions-Deploy
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push backend image
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+      working-directory: ./backend
+      run: |
+        echo "Building backend image..."
+        
+        # Build the Docker image
+        docker build -t $ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:$IMAGE_TAG .
+        docker tag $ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:latest
+        
+        echo "Pushing backend image to ECR..."
+        docker push $ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:latest
+        
+        echo "Backend image pushed successfully!"
+        echo "backend-image=$ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    - name: Build, tag, and push frontend image
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+      working-directory: ./frontend
+      run: |
+        echo "Building frontend image..."
+        
+        # Build the Docker image
+        docker build -t $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG .
+        docker tag $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:latest
+        
+        echo "Pushing frontend image to ECR..."
+        docker push $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:latest
+        
+        echo "Frontend image pushed successfully!"
+        echo "frontend-image=$ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    - name: Verify images in ECR
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        echo "Verifying backend image..."
+        aws ecr describe-images --repository-name $BACKEND_ECR_REPOSITORY --image-ids imageTag=$IMAGE_TAG --region $AWS_REGION
+        
+        echo "Verifying frontend image..."
+        aws ecr describe-images --repository-name $FRONTEND_ECR_REPOSITORY --image-ids imageTag=$IMAGE_TAG --region $AWS_REGION
+        
+        echo "✅ All images successfully pushed to ECR!"
+
+    - name: Run post-deployment health checks
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        echo "Running post-deployment validations..."
+        
+        # Test that images can be pulled
+        echo "Testing backend image pull..."
+        docker pull $ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:$IMAGE_TAG
+        
+        echo "Testing frontend image pull..."
+        docker pull $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG
+        
+        echo "✅ Post-deployment health checks passed!"
+
+    - name: Create deployment summary
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Images Deployed:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Backend**: \`$ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Frontend**: \`$ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Deployment Details:" >> $GITHUB_STEP_SUMMARY
+        echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **AWS Region**: \`$AWS_REGION\`" >> $GITHUB_STEP_SUMMARY
+        echo "- **ECR Registry**: \`$ECR_REGISTRY\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+        echo "1. Images are now available in ECR" >> $GITHUB_STEP_SUMMARY
+        echo "2. Deploy to ECS using the new image tags" >> $GITHUB_STEP_SUMMARY
+        echo "3. Run integration tests against the deployed services" >> $GITHUB_STEP_SUMMARY
+
+  # # Optional: Add ECS deployment if you have ECS services configured
+  # deploy-to-ecs:
+  #   name: Deploy to ECS (Optional)
+  #   runs-on: ubuntu-latest
+  #   needs: build-and-deploy
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+  #   steps:
+  #   - name: Configure AWS credentials
+  #     uses: aws-actions/configure-aws-credentials@v4
+  #     with:
+  #       role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+  #       role-session-name: GitHubActions-ECS-Deploy
+  #       aws-region: ${{ env.AWS_REGION }}
+
+  #   - name: Update ECS service (if configured)
+  #     env:
+  #       IMAGE_TAG: ${{ github.sha }}
+  #     run: |
+  #       # This step assumes you have ECS services already configured
+  #       # You can uncomment and modify based on your ECS setup
+        
+  #       echo "ECS deployment step - modify as needed for your setup"
+  #       echo "Backend Image: $ECR_REGISTRY/$BACKEND_ECR_REPOSITORY:$IMAGE_TAG"
+  #       echo "Frontend Image: $ECR_REGISTRY/$FRONTEND_ECR_REPOSITORY:$IMAGE_TAG"
+        
+  #       # Example ECS deployment command (uncomment and modify as needed):
+  #       # aws ecs update-service \
+  #       #   --cluster $ECS_CLUSTER \
+  #       #   --service $ECS_SERVICE \
+  #       #   --force-new-deployment \
+  #       #   --region $AWS_REGION

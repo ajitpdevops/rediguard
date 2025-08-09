@@ -188,11 +188,7 @@ export default function Events() {
     setFilteredEvents(filtered)
   }, [events, searchTerm, filterType, filterSeverity])
 
-  const getRiskColor = (score: number) => {
-    if (score >= 0.7) return 'text-red-600 dark:text-red-400'
-    if (score >= 0.4) return 'text-yellow-600 dark:text-yellow-400'
-    return 'text-green-600 dark:text-green-400'
-  }
+  // Removed unused function getRiskColor
 
   const getRiskBadge = (score: number): "default" | "destructive" | "secondary" => {
     if (score >= 0.7) return 'destructive'
