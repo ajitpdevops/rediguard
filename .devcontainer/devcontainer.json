@@ -1,0 +1,115 @@
+{
+  // Name of the development container displayed in VS Code
+  "name": "CloudAI",
+  // Build configuration for the container
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  // disable ip6
+  "runArgs": [
+    "--sysctl", "net.ipv6.conf.all.disable_ipv6=1",
+    "--sysctl", "net.ipv6.conf.default.disable_ipv6=1",
+    "--sysctl", "net.ipv6.conf.lo.disable_ipv6=1",
+    "--cap-add=NET_ADMIN"
+  ],
+  // Run container in privileged mode to allow Docker-in-Docker functionality
+  "privileged": true,
+  // Volume mounts for persistent storage
+  // - devcontainer-home: Preserves home directory between container rebuilds
+  // - devcontainer-docker: Preserves Docker cache and images between sessions
+  // - Local repos: Mount local repos directory (configurable via CloudAI_REPOS_PATH env var)
+  "mounts": [
+    "source=devcontainer-home,target=/home/cloudai,type=volume",
+    "source=devcontainer-docker,target=/var/lib/docker,type=volume"
+  ],
+  // User to run as inside the container (matches USERNAME in Dockerfile)
+  // https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user
+  "containerUser": "cloudai",
+  "remoteUser": "cloudai",
+  "updateRemoteUserUID": false,
+  // Environment variables set in the container
+  "containerEnv": {
+    // AWS SSO Configuration
+    "AWS_DEFAULT_SSO_START_URL": "https://d-9067df9efc.awsapps.com/start/",
+    "AWS_DEFAULT_SSO_REGION": "us-east-1",
+    "AWS_DEFAULT_REGION": "ap-south-1",
+    // Workspace path inside container
+    "CONTAINER_WORKSPACE": "${containerWorkspaceFolder}",
+    // Enable Docker BuildKit for improved build performance
+    "DOCKER_BUILDKIT": "1"
+  },
+  // VS Code specific customizations
+  "customizations": {
+    "vscode": {
+      // VS Code settings that override user settings while in this container
+      "settings": {
+        // dev container
+        "dev.containers.dockerCredentialHelper": false,
+        // aws
+        "aws.sso.startUrl": "https://my-sso-portal.awsapps.com/start",
+        "aws.sso.region": "us-east-2",
+        "aws.region": "us-east-2",
+        // editor
+        "editor.formatOnSave": true,
+        "editor.tabSize": 4,
+        // extensions
+        "extensions.ignoreRecommendations": true,
+        // files
+        "files.autoSave": "afterDelay",
+        "files.encoding": "utf8",
+        "files.eol": "\n",
+        "files.trimTrailingWhitespace": true,
+        // git
+        "git.autofetch": true,
+        "git.confirmSync": false,
+        // github
+        "github.copilot.advanced": {
+          "authProvider": "github"
+        },
+        // terminal
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/usr/bin/bash",
+            "args": ["-li"]
+          },
+          "zsh": {
+            "path": "/usr/bin/zsh",
+            "args": ["-li"]
+          }
+        },
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.scrollback": 10000,
+        // telemetry
+        "telemetry.telemetryLevel": "off",
+        "aws.telemetry": false,
+        "redhat.telemetry.enabled": false
+      },
+      // VS Code extensions to be installed automatically when the container is created
+      "extensions": [
+        // Bash scripting
+        "mads-hartmann.bash-ide-vscode",
+        // Terraform syntax highlighting, validation and formatting
+        "hashicorp.terraform",
+        // GitHub extensions
+        "GitHub.copilot", // AI code assistance
+        "GitHub.copilot-chat", // AI conversational interface
+        "github.vscode-github-actions", // GitHub Actions workflow support
+        "github.vscode-pull-request-github", // GitHub PR management
+        // Git
+        "eamodio.gitlens",
+        // Docker for container management
+        "ms-azuretools.vscode-containers",
+        // System resource monitoring extension
+        "mutantdino.resourcemonitor",
+        // prettier - most popular formatter
+        "esbenp.prettier-vscode",
+        // lang support
+        "ms-vscode.vscode-json",
+        "ms-vscode.yaml",
+        "redhat.vscode-xml"
+      ]
+    }
+  },
+  // lets clean docker on the host clean and clean up unused anonymous volumes
+  "initializeCommand": "docker volume prune -f"
+}

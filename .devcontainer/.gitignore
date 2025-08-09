@@ -1,0 +1,7 @@
+# DevContainer Environment Files
+devcontainer.env
+devcontainer.local.json
+
+# Personal configuration files that shouldn't be committed
+.env.local
+*.local.json
