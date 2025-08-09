@@ -1,0 +1,100 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecr:GetAuthorizationToken",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage",
+                "ecr:DescribeRepositories",
+                "ecr:CreateRepository",
+                "ecr:InitiateLayerUpload",
+                "ecr:UploadLayerPart",
+                "ecr:CompleteLayerUpload",
+                "ecr:PutImage"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecs:CreateCluster",
+                "ecs:DescribeClusters",
+                "ecs:CreateService",
+                "ecs:UpdateService",
+                "ecs:DescribeServices",
+                "ecs:RegisterTaskDefinition",
+                "ecs:DescribeTaskDefinition",
+                "ecs:ListTaskDefinitions",
+                "ecs:RunTask",
+                "ecs:StopTask",
+                "ecs:DescribeTasks"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "elasticloadbalancing:CreateLoadBalancer",
+                "elasticloadbalancing:DescribeLoadBalancers",
+                "elasticloadbalancing:CreateTargetGroup",
+                "elasticloadbalancing:DescribeTargetGroups",
+                "elasticloadbalancing:CreateListener",
+                "elasticloadbalancing:DescribeListeners",
+                "elasticloadbalancing:ModifyTargetGroup",
+                "elasticloadbalancing:RegisterTargets"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeVpcs",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeSecurityGroups",
+                "ec2:CreateSecurityGroup",
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:DescribeNetworkInterfaces"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:GetRole",
+                "iam:PassRole",
+                "iam:CreateRole",
+                "iam:AttachRolePolicy",
+                "iam:CreatePolicy"
+            ],
+            "Resource": [
+                "arn:aws:iam::*:role/ecsTaskExecutionRole",
+                "arn:aws:iam::*:role/ecsTaskRole",
+                "arn:aws:iam::*:role/rediguard-*",
+                "arn:aws:iam::*:policy/rediguard-*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "elasticache:CreateCacheCluster",
+                "elasticache:DescribeCacheClusters",
+                "elasticache:CreateCacheSubnetGroup",
+                "elasticache:DescribeCacheSubnetGroups"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
