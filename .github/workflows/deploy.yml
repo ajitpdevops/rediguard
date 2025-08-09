@@ -64,10 +64,56 @@ jobs:
 
     - name: Run backend tests
       working-directory: ./backend
+      env:
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        PYTHONPATH: /home/runner/work/rediguard/rediguard/backend
       run: |
         # Start Redis for testing
-        docker run -d --name redis-test -p 6379:6379 redis:latest
+        docker run -d --name redis-test -p 6379:6379 redis:8.2-rc1-alpine
         sleep 10
+        
+        # Wait for Redis to be ready
+        timeout 30 bash -c '
+        until docker exec redis-test redis-cli ping; do
+          echo "Waiting for Redis to be ready..."
+          sleep 2
+        done'
+        
+        echo "✅ Redis is ready"
+        
+        # Test Python imports and basic functionality first
+        echo "Testing Python modules..."
+        uv run python -c "
+        import sys
+        print('Python path:', sys.path)
+        try:
+            from app.models import LoginEvent, HealthCheck
+            print('✅ Models import successful')
+        except Exception as e:
+            print(f'❌ Models import failed: {e}')
+            import traceback
+            traceback.print_exc()
+            exit(1)
+        
+        try:
+            from app.api.routes import router
+            print('✅ Routes import successful')
+        except Exception as e:
+            print(f'❌ Routes import failed: {e}')
+            import traceback
+            traceback.print_exc()
+            exit(1)
+        
+        try:
+            from main import app
+            print('✅ FastAPI app import successful')
+        except Exception as e:
+            print(f'❌ FastAPI app import failed: {e}')
+            import traceback
+            traceback.print_exc()
+            exit(1)
+        "
         
         # Run basic health check tests
         uv run python -c "
@@ -78,7 +124,7 @@ jobs:
 
         # Start the server in background
         proc = subprocess.Popen(['uv', 'run', 'uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '8001'])
-        time.sleep(10)
+        time.sleep(15)
 
         try:
             # Test health endpoint
@@ -86,6 +132,14 @@ jobs:
             print(f'Health check status: {response.status_code}')
             if response.status_code == 200:
                 print('✅ Backend health check passed')
+                
+                # Test a few more endpoints
+                try:
+                    stats_response = requests.get('http://localhost:8001/api/v1/stats/overview', timeout=5)
+                    print(f'Stats endpoint status: {stats_response.status_code}')
+                except Exception as e:
+                    print(f'Stats endpoint test: {e}')
+                    
             else:
                 print('❌ Backend health check failed')
                 exit(1)

@@ -73,28 +73,118 @@ jobs:
         echo "Running TypeScript type checking..."
         npx tsc --noEmit
 
+    - name: Test backend modules
+      working-directory: ./backend
+      env:
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+        PYTHONPATH: /home/runner/work/rediguard/rediguard/backend
+      run: |
+        echo "Testing backend module imports and basic functionality..."
+        
+        # Run our health check script
+        uv run python test_health.py
+        
+        if [ $? -eq 0 ]; then
+          echo "✅ Backend module tests passed"
+        else
+          echo "❌ Backend module tests failed"
+          exit 1
+        fi
+
     - name: Test backend health check
       working-directory: ./backend
       env:
         REDIS_HOST: localhost
         REDIS_PORT: 6379
+        PYTHONPATH: /home/runner/work/rediguard/rediguard/backend
       run: |
         echo "Testing backend startup and health..."
         
-        # Start the server in background
+        # First, verify Redis is actually running and accessible
+        echo "Testing Redis connectivity..."
+        timeout 30 bash -c '
+        until redis-cli -h localhost -p 6379 ping; do
+          echo "Waiting for Redis to be ready..."
+          sleep 2
+        done'
+        
+        echo "✅ Redis is responding"
+        
+        # Test Python imports first
+        echo "Testing Python imports..."
+        uv run python -c "
+        import sys
+        print('Python path:', sys.path)
+        try:
+            from app.models import LoginEvent, HealthCheck
+            print('✅ Models import successful')
+        except Exception as e:
+            print(f'❌ Models import failed: {e}')
+            import traceback
+            traceback.print_exc()
+            exit(1)
+        
+        try:
+            from app.api.routes import router
+            print('✅ Routes import successful')
+        except Exception as e:
+            print(f'❌ Routes import failed: {e}')
+            import traceback
+            traceback.print_exc()
+            exit(1)
+        
+        try:
+            from main import app
+            print('✅ FastAPI app import successful')
+            print('App routes:', len(app.routes))
+        except Exception as e:
+            print(f'❌ FastAPI app import failed: {e}')
+            import traceback
+            traceback.print_exc()
+            exit(1)
+        "
+        
+        # Start the server in background with explicit error handling
+        echo "Starting uvicorn server..."
         uv run uvicorn main:app --host 0.0.0.0 --port 8001 &
         SERVER_PID=$!
         
-        # Wait for server to start
-        sleep 15
+        # Wait for server to start with timeout
+        echo "Waiting for server to start..."
+        timeout 30 bash -c '
+        until curl -s http://localhost:8001/health > /dev/null; do
+          echo "Waiting for server to respond..."
+          sleep 2
+        done'
+        
+        if [ $? -ne 0 ]; then
+          echo "❌ Server failed to start within timeout"
+          echo "Checking server process..."
+          ps aux | grep uvicorn || echo "No uvicorn process found"
+          echo "Checking server logs..."
+          kill -0 $SERVER_PID 2>/dev/null && echo "Server process still running" || echo "Server process not running"
+          kill $SERVER_PID 2>/dev/null || true
+          exit 1
+        fi
         
         # Test health endpoint
+        echo "Testing health endpoint..."
         response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8001/health || echo "000")
         
         if [ "$response" = "200" ]; then
           echo "✅ Backend health check passed (HTTP $response)"
+          
+          # Get health response details
+          health_response=$(curl -s http://localhost:8001/health || echo "{}")
+          echo "Health response: $health_response"
         else
           echo "❌ Backend health check failed (HTTP $response)"
+          
+          # Show server logs for debugging
+          echo "Checking server status..."
+          curl -v http://localhost:8001/health || echo "Curl failed"
+          
           kill $SERVER_PID 2>/dev/null || true
           exit 1
         fi
@@ -102,13 +192,23 @@ jobs:
         # Test API endpoints
         echo "Testing API endpoints..."
         
-        # Test events endpoint
-        events_response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8001/api/v1/events || echo "000")
-        echo "Events endpoint: HTTP $events_response"
+        # Test events endpoint - expect 422 for missing request body
+        events_response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8001/api/v1/events/login || echo "000")
+        echo "Events endpoint: HTTP $events_response (expected 422 for missing body)"
         
-        # Test users endpoint  
-        users_response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8001/api/v1/users || echo "000")
-        echo "Users endpoint: HTTP $users_response"
+        # Test stats endpoint
+        stats_response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8001/api/v1/stats/overview || echo "000")
+        echo "Stats endpoint: HTTP $stats_response"
+        
+        if [ "$stats_response" = "200" ]; then
+          echo "✅ Stats endpoint working"
+        else
+          echo "⚠️ Stats endpoint returned HTTP $stats_response"
+        fi
+        
+        # Test root endpoint
+        root_response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8001/ || echo "000")
+        echo "Root endpoint: HTTP $root_response"
         
         # Clean up
         kill $SERVER_PID 2>/dev/null || true
