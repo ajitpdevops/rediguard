@@ -82,47 +82,16 @@ jobs:
         
         echo "✅ Redis is ready"
         
-        # Test Python imports and basic functionality first
+        # Test Python imports and basic functionality using dedicated test script
         echo "Testing Python modules..."
-        uv run python -c "
-        import sys
-        import os
+        uv run python test_imports.py
         
-        # Ensure current directory is in Python path
-        current_dir = os.getcwd()
-        if current_dir not in sys.path:
-            sys.path.insert(0, current_dir)
-        
-        print('Python path:', sys.path)
-        print('Current working directory:', current_dir)
-        
-        try:
-            from app.models import LoginEvent, HealthCheck
-            print('✅ Models import successful')
-        except Exception as e:
-            print(f'❌ Models import failed: {e}')
-            import traceback
-            traceback.print_exc()
-            exit(1)
-        
-        try:
-            from app.api.routes import router
-            print('✅ Routes import successful')
-        except Exception as e:
-            print(f'❌ Routes import failed: {e}')
-            import traceback
-            traceback.print_exc()
-            exit(1)
-        
-        try:
-            from main import app
-            print('✅ FastAPI app import successful')
-        except Exception as e:
-            print(f'❌ FastAPI app import failed: {e}')
-            import traceback
-            traceback.print_exc()
-            exit(1)
-        "
+        if [ $? -eq 0 ]; then
+          echo "✅ Backend import tests passed"
+        else
+          echo "❌ Backend import tests failed"
+          exit 1
+        fi
         
         # Run basic health check tests
         uv run python -c "

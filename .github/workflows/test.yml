@@ -102,13 +102,13 @@ jobs:
       run: |
         echo "Testing backend module imports and basic functionality..."
         
-        # Run our health check script
-        uv run python test_health.py
+        # Run our dedicated import test script
+        uv run python test_imports.py
         
         if [ $? -eq 0 ]; then
-          echo "✅ Backend module tests passed"
+          echo "✅ Backend import tests passed"
         else
-          echo "❌ Backend module tests failed"
+          echo "❌ Backend import tests failed"
           exit 1
         fi
 
