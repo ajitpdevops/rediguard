@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,11 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { 
-  Settings, 
   Shield, 
   Database, 
   Bell,
-  Users,
   Lock,
   Activity,
   Save,
@@ -125,7 +123,7 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle')
 
-  const handleSaveSettings = async (type: 'security' | 'redis') => {
+  const handleSaveSettings = async () => {
     setIsLoading(true)
     setSaveStatus('saving')
     
@@ -135,7 +133,7 @@ export default function SettingsPage() {
       
       setSaveStatus('success')
       setTimeout(() => setSaveStatus('idle'), 3000)
-    } catch (error) {
+    } catch {
       setSaveStatus('error')
       setTimeout(() => setSaveStatus('idle'), 3000)
     } finally {
@@ -143,7 +141,7 @@ export default function SettingsPage() {
     }
   }
 
-  const updateSecuritySetting = (section: keyof SecuritySettings, key: string, value: any) => {
+  const updateSecuritySetting = (section: keyof SecuritySettings, key: string, value: string | number | boolean) => {
     setSecuritySettings(prev => ({
       ...prev,
       [section]: {
@@ -153,7 +151,7 @@ export default function SettingsPage() {
     }))
   }
 
-  const updateRedisSetting = (section: keyof RedisSettings, key: string, value: any) => {
+  const updateRedisSetting = (section: keyof RedisSettings, key: string, value: string | number | boolean) => {
     setRedisSettings(prev => ({
       ...prev,
       [section]: {
@@ -439,7 +437,7 @@ export default function SettingsPage() {
 
             <div className="flex justify-end">
               <Button 
-                onClick={() => handleSaveSettings('security')}
+                onClick={() => handleSaveSettings()}
                 disabled={isLoading}
                 className="w-32"
               >
@@ -657,7 +655,7 @@ export default function SettingsPage() {
 
             <div className="flex justify-end">
               <Button 
-                onClick={() => handleSaveSettings('redis')}
+                onClick={() => handleSaveSettings()}
                 disabled={isLoading}
                 className="w-32"
               >

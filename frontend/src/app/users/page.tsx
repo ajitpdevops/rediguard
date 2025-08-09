@@ -54,7 +54,6 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
   const [searchTerm, setSearchTerm] = useState("")
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
   const fetchUsers = async () => {
     setIsLoading(true)
@@ -194,11 +193,7 @@ export default function UsersPage() {
     }
   }, [users, searchTerm])
 
-  const getRiskColor = (score: number) => {
-    if (score >= 0.7) return 'text-red-600 dark:text-red-400'
-    if (score >= 0.4) return 'text-yellow-600 dark:text-yellow-400'
-    return 'text-green-600 dark:text-green-400'
-  }
+  // Removed unused function getRiskColor
 
   const getRiskBadge = (score: number): "default" | "destructive" | "secondary" => {
     if (score >= 0.7) return 'destructive'
@@ -422,7 +417,7 @@ export default function UsersPage() {
                           <Button 
                             variant="outline" 
                             size="sm"
-                            onClick={() => setSelectedUser(user)}
+                            onClick={() => console.log('View user:', user.username)}
                           >
                             <Eye className="mr-1 h-3 w-3" />
                             View
