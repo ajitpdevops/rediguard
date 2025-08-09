@@ -67,11 +67,11 @@ jobs:
         echo "Running frontend linting..."
         npm run lint
 
-    - name: Type check frontend
+    - name: Build frontend (includes type checking)
       working-directory: ./frontend
       run: |
-        echo "Running TypeScript type checking..."
-        npx tsc --noEmit
+        echo "Building frontend (this includes TypeScript type checking)..."
+        npm run build
 
     - name: Test backend modules
       working-directory: ./backend
@@ -214,12 +214,6 @@ jobs:
         kill $SERVER_PID 2>/dev/null || true
         
         echo "✅ Backend API tests completed"
-
-    - name: Build frontend
-      working-directory: ./frontend
-      run: |
-        echo "Building frontend..."
-        npm run build
 
     - name: Test frontend build
       working-directory: ./frontend
