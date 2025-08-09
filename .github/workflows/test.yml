@@ -67,30 +67,35 @@ jobs:
         echo "Running frontend linting..."
         npm run lint
 
-    - name: Debug frontend structure
+    - name: Debug path resolution
       working-directory: ./frontend
       run: |
-        echo "Checking frontend file structure..."
-        echo "Current directory: $(pwd)"
-        echo "Node.js version: $(node --version)"
-        echo "npm version: $(npm --version)"
-        echo "TypeScript version: $(npx tsc --version)"
-        echo "src/lib directory contents:"
-        ls -la src/lib/ || echo "src/lib not found"
-        echo "tsconfig.json paths configuration:"
-        cat tsconfig.json | grep -A 5 -B 2 paths || echo "No paths found"
-        echo "Testing path resolution:"
+        echo "Current working directory:"
+        pwd
+        echo "Contents of src/lib:"
+        ls -la src/lib/ || echo "src/lib doesn't exist"
+        echo "TypeScript config:"
+        cat tsconfig.json | grep -A 15 paths || echo "No paths found in tsconfig"
+        echo "Next.js config:"
+        cat next.config.ts
+        echo "Testing Node module resolution:"
         node -e "
         const path = require('path');
         const fs = require('fs');
         console.log('src/lib/utils.ts exists:', fs.existsSync('src/lib/utils.ts'));
         console.log('Absolute path to utils:', path.resolve('src/lib/utils.ts'));
+        console.log('Process cwd:', process.cwd());
+        console.log('__dirname equivalent:', path.resolve('.'));
         "
+        echo "Testing TypeScript compilation directly:"
+        npx tsc --noEmit --skipLibCheck || echo "TSC compilation failed"
         
     - name: Build frontend (includes type checking)
       working-directory: ./frontend
       run: |
         echo "Building frontend (this includes TypeScript type checking)..."
+        # Clear Next.js cache to avoid any stale module resolution
+        rm -rf .next
         npm run build
 
     - name: Test backend modules

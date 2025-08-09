@@ -131,6 +131,8 @@ jobs:
     - name: Build frontend for testing
       working-directory: ./frontend
       run: |
+        # Clear Next.js cache to avoid any stale module resolution
+        rm -rf .next
         npm run build
 
     - name: Test frontend build
