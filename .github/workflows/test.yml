@@ -67,6 +67,26 @@ jobs:
         echo "Running frontend linting..."
         npm run lint
 
+    - name: Debug frontend structure
+      working-directory: ./frontend
+      run: |
+        echo "Checking frontend file structure..."
+        echo "Current directory: $(pwd)"
+        echo "Node.js version: $(node --version)"
+        echo "npm version: $(npm --version)"
+        echo "TypeScript version: $(npx tsc --version)"
+        echo "src/lib directory contents:"
+        ls -la src/lib/ || echo "src/lib not found"
+        echo "tsconfig.json paths configuration:"
+        cat tsconfig.json | grep -A 5 -B 2 paths || echo "No paths found"
+        echo "Testing path resolution:"
+        node -e "
+        const path = require('path');
+        const fs = require('fs');
+        console.log('src/lib/utils.ts exists:', fs.existsSync('src/lib/utils.ts'));
+        console.log('Absolute path to utils:', path.resolve('src/lib/utils.ts'));
+        "
+        
     - name: Build frontend (includes type checking)
       working-directory: ./frontend
       run: |
