@@ -13,6 +13,11 @@ from pathlib import Path
 backend_dir = Path(__file__).parent
 sys.path.insert(0, str(backend_dir))
 
+# Also ensure current working directory is in path
+current_dir = os.getcwd()
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
 async def test_health():
     """Test the backend health and basic functionality"""
     
