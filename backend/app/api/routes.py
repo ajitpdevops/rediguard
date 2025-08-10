@@ -850,6 +850,310 @@ async def clear_all_data(confirm: bool = Query(default=False, description="Confi
         raise HTTPException(status_code=500, detail="Failed to clear data")
 
 
+# Event Priority Classification
+def classify_event_priority(event_type: str, risk_score: float, is_anomaly: bool, details: Optional[Dict] = None) -> str:
+    """Classify event priority based on security importance"""
+    details = details or {}
+    
+    # High Priority (Always Show)
+    high_priority_types = {
+        "failed_login", "brute_force", "privilege_escalation", 
+        "suspicious_login", "impossible_travel", "data_exfiltration",
+        "unauthorized_access", "malware_detection", "insider_threat"
+    }
+    
+    # Geographic and time anomalies are always high priority if detected
+    if is_anomaly and (risk_score >= 0.7 or event_type in high_priority_types):
+        return "high"
+    
+    # Medium Priority (Show with Context)
+    medium_priority_conditions = [
+        event_type == "login" and risk_score >= 0.4,  # Successful logins with some risk
+        event_type == "admin_access",  # All admin actions are sensitive
+        event_type == "api_call" and risk_score >= 0.3,  # API calls with moderate risk
+        event_type == "password_change",  # Password changes are notable
+        event_type == "account_lockout",
+        event_type == "permission_change"
+    ]
+    
+    if any(medium_priority_conditions):
+        return "medium"
+    
+    # Low Priority (Background Processing Only)
+    return "low"
+
+
+@router.get("/events/security")
+async def get_security_events(
+    page: int = Query(default=1, ge=1, description="Page number"),
+    limit: int = Query(default=50, ge=1, le=100, description="Items per page"),
+    priority: Optional[str] = Query(default=None, description="Priority filter: high, medium, low"),
+    event_type: Optional[str] = Query(default=None, description="Event type filter"),
+    user_id: Optional[str] = Query(default=None, description="User ID filter"),
+    min_risk_score: Optional[float] = Query(default=None, ge=0.0, le=1.0, description="Minimum risk score"),
+    hours_back: int = Query(default=24, ge=1, le=168, description="Hours to look back")
+):
+    """Get security-focused events with priority classification"""
+    try:
+        offset = (page - 1) * limit
+        
+        # Mock security events with priority classification
+        all_events = await _generate_mock_security_events(hours_back)
+        
+        # Filter events based on security relevance (high and medium priority by default)
+        if priority:
+            filtered_events = [e for e in all_events if e["priority"] == priority]
+        else:
+            # Default: show high and medium priority events
+            filtered_events = [e for e in all_events if e["priority"] in ["high", "medium"]]
+        
+        # Apply additional filters
+        if event_type:
+            filtered_events = [e for e in filtered_events if e["event_type"] == event_type]
+        
+        if user_id:
+            filtered_events = [e for e in filtered_events if e["user_id"] == user_id]
+        
+        if min_risk_score is not None:
+            filtered_events = [e for e in filtered_events if e["risk_score"] >= min_risk_score]
+        
+        # Apply pagination
+        total_events = len(filtered_events)
+        paginated_events = filtered_events[offset:offset + limit]
+        
+        # Calculate pagination info
+        total_pages = (total_events + limit - 1) // limit
+        has_next = page < total_pages
+        has_prev = page > 1
+        
+        return {
+            "events": paginated_events,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total_events,
+                "total_pages": total_pages,
+                "has_next": has_next,
+                "has_prev": has_prev
+            },
+            "filters_applied": {
+                "priority": priority,
+                "event_type": event_type,
+                "user_id": user_id,
+                "min_risk_score": min_risk_score,
+                "hours_back": hours_back
+            },
+            "priority_distribution": _get_priority_distribution(all_events)
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get security events: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get security events")
+
+
+@router.get("/events/all")
+async def get_all_events(
+    page: int = Query(default=1, ge=1, description="Page number"),
+    limit: int = Query(default=50, ge=1, le=100, description="Items per page"),
+    event_type: Optional[str] = Query(default=None, description="Event type filter"),
+    user_id: Optional[str] = Query(default=None, description="User ID filter"),
+    min_risk_score: Optional[float] = Query(default=None, ge=0.0, le=1.0, description="Minimum risk score"),
+    include_low_priority: bool = Query(default=True, description="Include low priority events"),
+    hours_back: int = Query(default=24, ge=1, le=168, description="Hours to look back")
+):
+    """Get all events including low priority for forensic analysis"""
+    try:
+        offset = (page - 1) * limit
+        
+        # Get all events including low priority
+        all_events = await _generate_mock_security_events(hours_back, include_all=True)
+        
+        # Apply filters
+        filtered_events = all_events
+        
+        if not include_low_priority:
+            filtered_events = [e for e in filtered_events if e["priority"] != "low"]
+        
+        if event_type:
+            filtered_events = [e for e in filtered_events if e["event_type"] == event_type]
+        
+        if user_id:
+            filtered_events = [e for e in filtered_events if e["user_id"] == user_id]
+        
+        if min_risk_score is not None:
+            filtered_events = [e for e in filtered_events if e["risk_score"] >= min_risk_score]
+        
+        # Apply pagination
+        total_events = len(filtered_events)
+        paginated_events = filtered_events[offset:offset + limit]
+        
+        # Calculate pagination info
+        total_pages = (total_events + limit - 1) // limit
+        has_next = page < total_pages
+        has_prev = page > 1
+        
+        return {
+            "events": paginated_events,
+            "pagination": {
+                "page": page,
+                "limit": limit,
+                "total": total_events,
+                "total_pages": total_pages,
+                "has_next": has_next,
+                "has_prev": has_prev
+            },
+            "filters_applied": {
+                "event_type": event_type,
+                "user_id": user_id,
+                "min_risk_score": min_risk_score,
+                "include_low_priority": include_low_priority,
+                "hours_back": hours_back
+            },
+            "priority_distribution": _get_priority_distribution(all_events),
+            "total_all_events": len(all_events)
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get all events: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get all events")
+
+
+async def _generate_mock_security_events(hours_back: int, include_all: bool = False) -> List[Dict]:
+    """Generate mock security events with realistic priority distribution"""
+    import random
+    from datetime import datetime, timedelta
+    
+    events = []
+    current_time = datetime.now()
+    start_time = current_time - timedelta(hours=hours_back)
+    
+    # Define event type distributions and characteristics
+    event_types = {
+        # High Priority Events
+        "failed_login": {"base_risk": 0.7, "anomaly_rate": 0.8, "priority": "high"},
+        "brute_force": {"base_risk": 0.9, "anomaly_rate": 0.95, "priority": "high"},
+        "impossible_travel": {"base_risk": 0.95, "anomaly_rate": 1.0, "priority": "high"},
+        "privilege_escalation": {"base_risk": 0.85, "anomaly_rate": 0.9, "priority": "high"},
+        "suspicious_login": {"base_risk": 0.8, "anomaly_rate": 0.85, "priority": "high"},
+        "data_exfiltration": {"base_risk": 0.9, "anomaly_rate": 0.9, "priority": "high"},
+        "unauthorized_access": {"base_risk": 0.85, "anomaly_rate": 0.8, "priority": "high"},
+        
+        # Medium Priority Events
+        "login": {"base_risk": 0.2, "anomaly_rate": 0.1, "priority": "medium"},
+        "admin_access": {"base_risk": 0.4, "anomaly_rate": 0.3, "priority": "medium"},
+        "password_change": {"base_risk": 0.3, "anomaly_rate": 0.2, "priority": "medium"},
+        "api_call": {"base_risk": 0.15, "anomaly_rate": 0.05, "priority": "medium"},
+        "account_lockout": {"base_risk": 0.5, "anomaly_rate": 0.4, "priority": "medium"},
+        "permission_change": {"base_risk": 0.45, "anomaly_rate": 0.3, "priority": "medium"},
+        
+        # Low Priority Events (only included if include_all=True)
+        "routine_activity": {"base_risk": 0.05, "anomaly_rate": 0.01, "priority": "low"},
+        "system_maintenance": {"base_risk": 0.1, "anomaly_rate": 0.02, "priority": "low"},
+        "normal_api_call": {"base_risk": 0.05, "anomaly_rate": 0.01, "priority": "low"},
+        "file_access": {"base_risk": 0.08, "anomaly_rate": 0.02, "priority": "low"},
+        "session_refresh": {"base_risk": 0.02, "anomaly_rate": 0.01, "priority": "low"}
+    }
+    
+    # Filter event types based on include_all flag
+    if not include_all:
+        event_types = {k: v for k, v in event_types.items() if v["priority"] != "low"}
+    
+    # Generate events with realistic distribution
+    num_events = random.randint(200, 500) if include_all else random.randint(50, 150)
+    
+    for i in range(num_events):
+        # Choose event type based on realistic frequency
+        if include_all:
+            # More low priority events in reality
+            priorities = ["high"] * 10 + ["medium"] * 30 + ["low"] * 60
+        else:
+            priorities = ["high"] * 25 + ["medium"] * 75
+        
+        target_priority = random.choice(priorities)
+        event_type_options = [k for k, v in event_types.items() if v["priority"] == target_priority]
+        event_type = random.choice(event_type_options)
+        
+        config = event_types[event_type]
+        
+        # Generate risk score with some variation
+        base_risk = config["base_risk"]
+        risk_score = max(0.0, min(1.0, base_risk + random.uniform(-0.2, 0.2)))
+        
+        # Determine if anomaly
+        is_anomaly = random.random() < config["anomaly_rate"]
+        if is_anomaly:
+            risk_score = max(risk_score, 0.6)  # Anomalies have higher risk
+        
+        # Generate timestamp within the time range
+        event_time = start_time + timedelta(
+            seconds=random.randint(0, int((current_time - start_time).total_seconds()))
+        )
+        
+        # Generate user and location
+        user_id = random.choice(USERS)
+        location = random.choice(LOCATIONS)
+        ip_type = "suspicious" if risk_score > 0.7 else random.choice(["corporate", "home", "vpn"])
+        ip_prefix = random.choice(IP_RANGES[ip_type])
+        ip_address = ip_prefix + str(random.randint(1, 254))
+        
+        # Classify priority using our function
+        priority = classify_event_priority(event_type, risk_score, is_anomaly)
+        
+        event = {
+            "id": f"event_{i+1:06d}",
+            "user_id": user_id,
+            "event_type": event_type,
+            "ip_address": ip_address,
+            "location": f"{location['city']}, {location['country']}",
+            "timestamp": event_time.isoformat(),
+            "risk_score": round(risk_score, 3),
+            "is_anomaly": is_anomaly,
+            "priority": priority,
+            "location_risk": location["risk"],
+            "details": {
+                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "session_id": f"sess_{random.randint(100000, 999999)}",
+                "action": event_type.replace("_", " ").title(),
+                "resource": f"/api/{event_type}" if "api" in event_type else None,
+                "duration_ms": random.randint(50, 2000) if event_type in ["api_call", "data_access"] else None
+            }
+        }
+        
+        events.append(event)
+    
+    # Sort by timestamp (newest first)
+    events.sort(key=lambda x: x["timestamp"], reverse=True)
+    
+    return events
+
+
+def _get_priority_distribution(events: List[Dict]) -> Dict:
+    """Calculate priority distribution statistics"""
+    priority_counts = {"high": 0, "medium": 0, "low": 0}
+    
+    for event in events:
+        priority = event.get("priority", "low")
+        priority_counts[priority] += 1
+    
+    total = len(events)
+    
+    return {
+        "total_events": total,
+        "high_priority": {
+            "count": priority_counts["high"],
+            "percentage": round((priority_counts["high"] / total) * 100, 1) if total > 0 else 0
+        },
+        "medium_priority": {
+            "count": priority_counts["medium"],
+            "percentage": round((priority_counts["medium"] / total) * 100, 1) if total > 0 else 0
+        },
+        "low_priority": {
+            "count": priority_counts["low"],
+            "percentage": round((priority_counts["low"] / total) * 100, 1) if total > 0 else 0
+        }
+    }
+
+
 # LLM Endpoints
 @router.get("/llm/status")
 async def get_llm_status():
