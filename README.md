@@ -1,16 +1,18 @@
-# 🛡️ RediGuard - Real-Time Security & Threat Detection
+# 🛡️ RediGuard - AI-Powered Real-Time Security & Threat Detection
 
 [![CI/CD Pipeline](https://github.com/ajitpdevops/rediguard/actions/workflows/test.yml/badge.svg)](https://github.com/ajitpdevops/rediguard/actions)
 [![Deploy to AWS](https://github.com/ajitpdevops/rediguard/actions/workflows/deploy.yml/badge.svg)](https://github.com/ajitpdevops/rediguard/actions)
 
-A cutting-edge real-time security monitoring and threat detection system powered by **Redis 8** and **AI/ML**. RediGuard combines advanced Redis data structures with machine learning to detect suspicious login patterns, anomalous behaviors, and potential security threats in real-time.
+A cutting-edge **AI-powered** real-time security monitoring and threat detection system powered by **Redis 8** and **Large Language Models**. RediGuard combines advanced Redis data structures with machine learning and conversational AI to detect suspicious login patterns, anomalous behaviors, and potential security threats in real-time, while providing intelligent threat explanations and interactive security insights.
 
 ## 🎯 Overview
 
-RediGuard demonstrates how Redis 8's powerful features can be leveraged for cybersecurity applications:
+RediGuard demonstrates how Redis 8's powerful features can be leveraged for AI-enhanced cybersecurity applications:
 
 - **Real-time event processing** using Redis Streams
 - **AI-powered anomaly detection** with vector similarity search
+- **LLM-powered threat explanations** with conversational AI interface
+- **Intelligent security assistant** with contextual awareness
 - **Time-series analysis** for pattern recognition
 - **Bloom filters** for efficient blacklist checking
 - **JSON storage** for complex alert data
@@ -18,62 +20,104 @@ RediGuard demonstrates how Redis 8's powerful features can be leveraged for cybe
 
 ## ✨ Features
 
-### 🔒 Security Monitoring
-- Real-time login event ingestion and processing
-- Geolocation-based anomaly detection (impossible travel scenarios)
-- IP address reputation checking via Bloom filters
-- User behavior pattern analysis using AI embeddings
+### 🤖 AI-Powered Security Intelligence
+- **LLM-powered threat explanations** with business-friendly language using llama3-8b-8192
+- **Conversational security assistant** with contextual system awareness and chat interface
+- **Real-time threat analysis** integrated directly into alert cards with risk assessment
+- **Interactive AI chat interface** for security insights, investigation, and guidance
+- **Intelligent threat summarization** with natural language risk assessment and recommendations
+- **Vector embeddings** for behavioral pattern analysis and anomaly detection
+- **Semantic caching** for optimized LLM response times and cost efficiency
+
+### 🔒 Advanced Security Monitoring
+- **Real-time login event ingestion** and processing with Redis Streams
+- **Geolocation-based anomaly detection** for impossible travel scenarios
+- **IP address reputation checking** via Redis Bloom filters for efficient lookups
+- **User behavior pattern analysis** using AI embeddings and vector similarity search
+- **ML-powered anomaly detection** with Isolation Forest algorithms and time-series analysis
+- **Event correlation** and pattern recognition across multiple data dimensions
+- **Automated threat scoring** with configurable risk thresholds and alerting
+- **Event prioritization system** with high/medium/low priority classification
+- **Security-focused UI** with toggle for forensic analysis mode
 
 ### 📊 Analytics & Insights
 - Interactive dashboard with real-time updates
 - Historical trend analysis with time-series data
 - Advanced search and filtering of security alerts
 - Visual representation of threat landscapes
+- AI-enhanced security metrics and recommendations
 
 ### 🚀 Performance & Scalability
 - Redis 8 powered for sub-millisecond response times
 - Containerized architecture for easy deployment
 - Horizontal scaling capabilities
 - CI/CD pipeline for automated testing and deployment
+- LLM response caching for optimized AI performance
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │    Backend      │    │     Redis 8     │
-│   (Next.js)     │◄──►│   (FastAPI)     │◄──►│   (All Modules) │
-│                 │    │                 │    │                 │
-│ - Dashboard     │    │ - API Routes    │    │ - Streams       │
-│ - Real-time UI  │    │ - AI Processing │    │ - TimeSeries    │
-│ - Charts        │    │ - Event Workers │    │ - Vector Search │
-└─────────────────┘    └─────────────────┘    │ - Bloom Filters │
-                                              │ - JSON Documents│
-                                              │ - Search Index  │
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │    Backend      │    │     Redis 8     │    │   LLM Service   │
+│   (Next.js)     │◄──►│   (FastAPI)     │◄──►│   (All Modules) │◄──►│   (Groq API)    │
+│                 │    │                 │    │                 │    │                 │
+│ - Dashboard     │    │ - API Routes    │    │ - Streams       │    │ - Threat Analysis│
+│ - Real-time UI  │    │ - AI Processing │    │ - TimeSeries    │    │ - Chat Interface│
+│ - AI Assistant  │    │ - Event Workers │    │ - Vector Search │    │ - Explanations  │
+│ - Chat Interface│    │ - LLM Service   │    │ - Bloom Filters │    │ - Risk Assessment│
+│ - Charts        │    │ - Threat Analysis│   │ - JSON Documents│    │ - Recommendations│
+└─────────────────┘    └─────────────────┘    │ - Search Index  │    └─────────────────┘
                                               └─────────────────┘
 ```
 
 ## 🛠️ Tech Stack
 
 ### Backend
-- **FastAPI** - High-performance Python web framework
-- **Redis 8** - In-memory data store with advanced modules
-- **scikit-learn** - Machine learning for anomaly detection
-- **NumPy** - Numerical computing for vector operations
-- **Pydantic** - Data validation and settings management
+- **🐍 Python 3.10+** with FastAPI framework
+- **⚡ uv** for dependency management and Python execution
+- **🔄 Async/await** for high-performance operations
+- **🤖 Groq API** with llama3-8b-8192 for AI-powered threat analysis
+- **💬 LLM Service** for conversational security assistance
 
-### Frontend
-- **Next.js 15** - React framework with App Router
-- **TypeScript** - Type-safe JavaScript
-- **Tailwind CSS** - Utility-first CSS framework
-- **Recharts** - Composable charting library
-- **Radix UI** - Low-level UI primitives
+### Frontend  
+- **⚛️ Next.js 15** with React Server Components
+- **📘 TypeScript** for type-safe development
+- **🎨 Tailwind CSS** for styling
+- **🌙 shadcn/ui** components
+- **🔄 Real-time updates** via API polling
+- **🤖 AI Assistant** interface for threat investigation
+
+### Redis Stack (8.2-rc1)
+- **🏄‍♂️ Redis Streams** - Event streaming and processing
+- **📊 RedisTimeSeries** - Time-based anomaly tracking and analytics
+- **🔍 RediSearch** - Vector similarity search with HNSW algorithm
+- **📄 RedisJSON** - Document storage for complex security events
+- **🌸 RedisBloom** - Probabilistic data structures for deduplication
+- **⚡ Redis Core** - High-performance caching and session management
 
 ### Infrastructure
-- **Docker** - Containerization
-- **Docker Compose** - Multi-container orchestration
-- **GitHub Actions** - CI/CD pipeline
-- **AWS ECR** - Container registry
-- **Redis Insights** - Redis monitoring and debugging
+- **🐳 Docker & Docker Compose** for development environment
+- **🌐 uvicorn** ASGI server
+- **📋 Structured logging** with Python logging module
+
+### Key Dependencies
+
+#### Backend (Python)
+- **FastAPI** - Modern, fast web framework for building APIs
+- **Redis** - Redis client for Python with async support
+- **groq** - Groq API client for LLM integration
+- **httpx** - Async HTTP client for API calls
+- **scikit-learn** - Machine learning library for anomaly detection
+- **numpy** - Numerical computing for data processing
+- **uvicorn** - Lightning-fast ASGI server
+
+#### Frontend (Node.js)
+- **Next.js 15** - React framework with server components
+- **TypeScript** - Type-safe JavaScript development
+- **Tailwind CSS** - Utility-first CSS framework
+- **Lucide React** - Beautiful icon library
+- **Recharts** - Composable charting library
+- **shadcn/ui** - Modern UI component library
 
 ## 🚀 Quick Start
 
@@ -175,6 +219,65 @@ curl -X GET "http://localhost:8000/api/v1/data/stats"
 curl -X POST "http://localhost:8000/api/v1/test/redis-features"
 ```
 
+## 🤖 AI & LLM Integration
+
+### **AI-Powered Threat Analysis**
+- **Intelligent explanations** for detected anomalies and threats
+- **Conversational interface** for security investigation
+- **Risk assessment** with natural language descriptions
+- **Proactive recommendations** for threat mitigation
+
+### **AI Assistant Endpoints**
+
+```bash
+# Get threat explanation for a specific event
+curl -X POST "http://localhost:8000/api/v1/llm/explain-threat" \
+  -H "Content-Type: application/json" \
+  -d '{"event_id": "event_123"}'
+
+# Chat with AI assistant about security
+curl -X POST "http://localhost:8000/api/v1/llm/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What are the current security risks?", "session_id": "session_123"}'
+
+# Get system health assessment
+curl -X GET "http://localhost:8000/api/v1/llm/health-assessment"
+```
+
+### **LLM Configuration**
+- **Model**: llama3-8b-8192 via Groq API
+- **Response time**: Sub-second latency for threat analysis
+- **Context awareness**: Integrated with Redis event data
+- **Semantic caching**: Optimized for repeated queries
+
+## 🔍 Event Prioritization System
+
+RediGuard implements an intelligent event prioritization system that categorizes security events based on their potential impact and relevance to security operations:
+
+### **High Priority Events (Always Shown)**
+- **Failed authentication attempts** - Direct security threats requiring immediate attention
+- **Privilege escalation attempts** - Critical security violations
+- **Unusual data access patterns** - Potential data exfiltration attempts
+- **Geographic anomalies** - Impossible travel scenarios and location-based threats
+- **Time-based anomalies** - Off-hours access and unusual timing patterns
+- **API abuse patterns** - Potential automated attacks and rate limit violations
+
+### **Medium Priority Events (Contextual Relevance)**
+- **Successful logins with risk factors** - Authentication events that contribute to behavioral patterns
+- **Normal API calls with elevated risk** - API usage for baseline establishment and pattern analysis
+- **Administrative actions** - All admin activities due to their inherently sensitive nature
+- **Password changes and security updates** - Account security modifications
+
+### **Low Priority Events (Background Processing)**
+- **Routine user activity** - Normal application usage for baseline establishment
+- **Normal application events** - Standard system operations
+- **System maintenance events** - Automated system processes
+
+### **UI Toggle Features**
+- **Security Events View**: Default view showing high and medium priority events for operational focus
+- **All Events View**: Forensic analysis mode with pagination and lazy loading for detailed investigation
+- **Smart Pagination**: Prevents UI hangs by limiting data loads and implementing efficient navigation
+
 ## 🔧 Development Setup
 
 ### Backend Development
@@ -218,10 +321,6 @@ docker run -d --name redis-stack \
   -p 6379:6379 -p 5540:5540 \
   redis:8.2-rc1-alpine
 
-# Or use Redis Stack for full feature set
-docker run -d --name redis-stack \
-  -p 6379:6379 -p 8001:8001 \
-  redis/redis-stack:8.2-RC1
 ```
 
 ## 📖 API Documentation
@@ -248,7 +347,22 @@ docker run -d --name redis-stack \
 - `POST /api/v1/test/redis-features` - Test all Redis 8 features
 - `DELETE /api/v1/data/clear` - Clear all data (use with caution)
 
-### Security Endpoints
+### AI & LLM Endpoints
+
+- `POST /api/v1/llm/explain-threat` - Get AI-powered threat explanation
+- `POST /api/v1/llm/chat` - Chat with AI security assistant
+- `GET /api/v1/llm/health-assessment` - Get system health assessment
+- `POST /api/v1/llm/analyze-event` - Deep analysis of security events
+
+### Event Endpoints
+
+- `GET /api/v1/events/security` - Get security-focused events (high/medium priority)
+- `GET /api/v1/events/all` - Get all events including low priority for forensic analysis
+- `GET /api/v1/alerts/search` - Search security alerts with filters
+- `GET /api/v1/users/{user_id}/anomaly-history` - User anomaly history
+- `GET /api/v1/users/{user_id}/similar-behavior` - Similar behavior patterns
+
+### Data Management Endpoints
 
 - `POST /api/v1/security/add-malicious-ip` - Add IP to blocklist
 - `GET /api/v1/security/check-ip/{ip}` - Check IP reputation
@@ -499,18 +613,34 @@ The application includes a complete CI/CD pipeline for AWS deployment:
 
 ### Environment Variables
 
+Required environment variables for full functionality:
+
 ```bash
-# Backend
+# LLM Service Configuration (Required for AI features)
+GROQ_API_KEY=your_groq_api_key_here
+LLM_MODEL=llama3-8b-8192
+LLM_MAX_TOKENS=1000
+LLM_TEMPERATURE=0.1
+
+# Redis Configuration
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_URL=redis://localhost:6379
+REDIS_PASSWORD=your_redis_password
 ENVIRONMENT=production
 
-# Frontend
+# Application Settings
+DEBUG=false
+LOG_LEVEL=INFO
+SECRET_KEY=your_secret_key_here
+
+# Frontend Configuration
 NODE_ENV=production
 NEXT_PUBLIC_API_URL=https://api.rediguard.com
 NEXT_PUBLIC_API_BASE_URL=https://api.rediguard.com
 ```
+
+**Important**: Create a `.env` file in the backend directory with these variables. The Groq API key is required for all AI-powered features including threat explanations and chat interface.
 
 ### Docker Production Build
 
@@ -529,6 +659,38 @@ docker compose -f compose.yml up -d
 - [� Data Management Guide](./docs/DATA_MANAGEMENT.md) - Comprehensive data management features
 - [☁️ AWS OIDC Setup](./docs/AWS_OIDC_SETUP.md) - Cloud deployment guide
 - [🔄 CI/CD Setup](./docs/CICD_SETUP.md) - Pipeline configuration
+
+## 🚧 Current Status & Roadmap
+
+### ✅ **Completed Features**
+- **Core Security Monitoring**: Real-time event ingestion, anomaly detection, threat scoring
+- **Redis 8 Integration**: Streams, TimeSeries, RediSearch, JSON, Bloom filters
+- **AI-Powered Analysis**: LLM threat explanations, conversational assistant, vector embeddings
+- **Modern Frontend**: Next.js 15 dashboard with real-time updates and AI chat interface
+- **Data Management**: Automated seeding, streaming, and comprehensive statistics
+- **Development Environment**: Docker Compose setup with hot reloading
+
+### 🔄 **In Progress**
+- **Advanced ML Models**: Enhanced anomaly detection algorithms
+- **Performance Optimization**: Response time improvements and caching strategies
+- **Extended AI Features**: Multi-turn conversations and advanced threat correlation
+
+### 📋 **Planned Features**
+- **Authentication & Authorization**: User management and role-based access control
+- **Alert Management**: Email/SMS notifications and escalation workflows
+- **Advanced Visualizations**: Network topology views and threat heat maps
+- **Integration APIs**: SIEM connectors and third-party security tool integration
+- **Mobile Application**: React Native app for on-the-go security monitoring
+- **Multi-tenant Support**: Enterprise-ready isolation and data segregation
+- **Compliance Reporting**: Automated security compliance reports and auditing
+
+### 🔍 **Missing Components (Technical Debt)**
+- **Comprehensive Test Suite**: Unit, integration, and end-to-end testing
+- **Production Security**: Rate limiting, input validation, and security headers
+- **Monitoring & Observability**: Application metrics, health checks, and alerting
+- **Documentation**: API documentation, deployment guides, and troubleshooting
+- **Error Handling**: Graceful degradation and user-friendly error messages
+- **Configuration Management**: Environment-specific settings and secrets management
 
 ## 🤝 Contributing
 
