@@ -20,10 +20,13 @@ import {
   User,
   MapPin,
   Activity,
-  Eye
+  Eye,
+  Brain,
+  Loader2
 } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import DashboardLayout from "@/components/dashboard-layout"
+import { MarkdownRenderer } from "@/components/markdown-renderer"
 
 interface SecurityAlert {
   id: string
@@ -45,6 +48,19 @@ interface SecurityAlert {
   }
 }
 
+interface ThreatExplanation {
+  alert_id: string
+  explanation: {
+    summary: string
+    details: string
+    risk_level: string
+    impact: string
+    recommendations: string
+  }
+  generated_at: string
+  model: string
+}
+
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<SecurityAlert[]>([])
   const [filteredAlerts, setFilteredAlerts] = useState<SecurityAlert[]>([])
@@ -54,6 +70,11 @@ export default function AlertsPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterSeverity, setFilterSeverity] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
+  
+  // Threat explanation states
+  const [threatExplanations, setThreatExplanations] = useState<Record<string, ThreatExplanation>>({})
+  const [loadingExplanations, setLoadingExplanations] = useState<Record<string, boolean>>({})
+  const [expandedExplanations, setExpandedExplanations] = useState<Record<string, boolean>>({})
 
   // Handle alert status updates
   const handleUpdateAlert = (alertId: string, newStatus: SecurityAlert['status']) => {
@@ -64,6 +85,67 @@ export default function AlertsPage() {
     )
     setAlerts(updatedAlerts)
     applyFilters(updatedAlerts)
+  }
+
+  // Handle threat explanation
+  const handleExplainThreat = async (alertId: string) => {
+    if (threatExplanations[alertId] || loadingExplanations[alertId]) {
+      // Toggle expansion if explanation already exists
+      setExpandedExplanations(prev => ({
+        ...prev,
+        [alertId]: !prev[alertId]
+      }))
+      return
+    }
+
+    setLoadingExplanations(prev => ({ ...prev, [alertId]: true }))
+
+    try {
+      const response = await fetch(`/api/v1/llm/explain-threat/${alertId}`)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const explanation = await response.json()
+      
+      setThreatExplanations(prev => ({
+        ...prev,
+        [alertId]: explanation
+      }))
+      
+      setExpandedExplanations(prev => ({
+        ...prev,
+        [alertId]: true
+      }))
+    } catch (error) {
+      console.error('Failed to explain threat:', error)
+      // Create a fallback explanation
+      const fallbackExplanation: ThreatExplanation = {
+        alert_id: alertId,
+        explanation: {
+          summary: "Unable to generate AI explanation at this time.",
+          details: "The AI service encountered an error while analyzing this threat.",
+          risk_level: "unknown",
+          impact: "Could not assess potential impact.",
+          recommendations: "Please review manually or try again later."
+        },
+        generated_at: new Date().toISOString(),
+        model: "fallback"
+      }
+      
+      setThreatExplanations(prev => ({
+        ...prev,
+        [alertId]: fallbackExplanation
+      }))
+      
+      setExpandedExplanations(prev => ({
+        ...prev,
+        [alertId]: true
+      }))
+    } finally {
+      setLoadingExplanations(prev => ({ ...prev, [alertId]: false }))
+    }
   }
 
   const fetchAlerts = async () => {
@@ -556,6 +638,57 @@ export default function AlertsPage() {
                                 <p className="text-sm">{alert.details.action_taken}</p>
                               </div>
                             )}
+
+                            {/* AI Threat Explanation */}
+                            {threatExplanations[alert.id] && expandedExplanations[alert.id] && (
+                              <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border-l-4 border-blue-500 mb-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <Brain className="h-4 w-4 text-blue-600" />
+                                  <span className="font-semibold text-blue-700 dark:text-blue-300">AI Threat Analysis</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {threatExplanations[alert.id].model}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="space-y-3">
+                                  <div>
+                                    <h5 className="text-sm font-medium mb-1 text-blue-800 dark:text-blue-200">Summary</h5>
+                                    <MarkdownRenderer 
+                                      content={threatExplanations[alert.id].explanation.summary}
+                                      className="text-sm text-muted-foreground"
+                                    />
+                                  </div>
+                                  
+                                  <div>
+                                    <h5 className="text-sm font-medium mb-1 text-blue-800 dark:text-blue-200">Risk Assessment</h5>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <Badge variant={
+                                        threatExplanations[alert.id].explanation.risk_level === 'high' ? 'destructive' :
+                                        threatExplanations[alert.id].explanation.risk_level === 'medium' ? 'default' : 'secondary'
+                                      }>
+                                        {threatExplanations[alert.id].explanation.risk_level}
+                                      </Badge>
+                                    </div>
+                                    <MarkdownRenderer 
+                                      content={threatExplanations[alert.id].explanation.impact}
+                                      className="text-sm text-muted-foreground"
+                                    />
+                                  </div>
+                                  
+                                  <div>
+                                    <h5 className="text-sm font-medium mb-1 text-blue-800 dark:text-blue-200">Recommended Actions</h5>
+                                    <MarkdownRenderer 
+                                      content={threatExplanations[alert.id].explanation.recommendations}
+                                      className="text-sm text-muted-foreground"
+                                    />
+                                  </div>
+                                  
+                                  <div className="text-xs text-muted-foreground border-t border-blue-200 dark:border-blue-800 pt-2">
+                                    Generated on {new Date(threatExplanations[alert.id].generated_at).toLocaleString()}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </div>
                           
                           {/* Right Side - Risk Score and Actions */}
@@ -615,6 +748,23 @@ export default function AlertsPage() {
                               >
                                 <Eye className="mr-1 h-3 w-3" />
                                 Details
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleExplainThreat(alert.id)}
+                                disabled={loadingExplanations[alert.id]}
+                                className="flex-1 lg:w-full"
+                              >
+                                {loadingExplanations[alert.id] ? (
+                                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Brain className="mr-1 h-3 w-3" />
+                                )}
+                                {threatExplanations[alert.id] ? 
+                                  (expandedExplanations[alert.id] ? 'Hide' : 'Show') + ' Explanation' : 
+                                  'Explain'
+                                }
                               </Button>
                             </div>
                           </div>

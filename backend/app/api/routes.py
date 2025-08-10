@@ -16,6 +16,7 @@ from app.models import (
 )
 from app.services.security_service import SecurityService
 from app.services.ai_service import ai_service
+from app.services.llm_service import llm_service
 from app.core.redis_stack import redis_stack_client
 
 logger = logging.getLogger(__name__)
@@ -847,3 +848,154 @@ async def clear_all_data(confirm: bool = Query(default=False, description="Confi
     except Exception as e:
         logger.error(f"Failed to clear data: {e}")
         raise HTTPException(status_code=500, detail="Failed to clear data")
+
+
+# LLM Endpoints
+@router.get("/llm/status")
+async def get_llm_status():
+    """Get LLM service status"""
+    try:
+        status = await llm_service.get_status()
+        return status
+        
+    except Exception as e:
+        logger.error(f"Failed to get LLM status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get LLM status")
+
+
+@router.get("/llm/explain-threat/{alert_id}")
+async def explain_threat(alert_id: str):
+    """Get AI-powered explanation for a security threat"""
+    try:
+        if not await llm_service.is_available():
+            raise HTTPException(status_code=503, detail="LLM service not available")
+        
+        explanation = await llm_service.explain_threat(alert_id)
+        return explanation
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to explain threat {alert_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to explain threat")
+
+
+@router.post("/llm/chat")
+async def chat_with_ai(request: Dict[str, Any]):
+    """Chat with AI assistant about security data"""
+    try:
+        if not await llm_service.is_available():
+            raise HTTPException(status_code=503, detail="LLM service not available")
+        
+        message = request.get("message", "")
+        context = request.get("context", {})
+        
+        if not message:
+            raise HTTPException(status_code=400, detail="Message is required")
+        
+        # Get security context for the AI
+        security_context = await get_security_context()
+        
+        # Enhance the message with security context
+        enhanced_message = f"""
+SECURITY SYSTEM CONTEXT:
+{security_context}
+
+USER QUESTION: {message}
+
+Please provide helpful information based on the current security context above. Be specific and actionable."""
+
+        response = await llm_service.chat(enhanced_message, context)
+        return response
+        
+    except Exception as e:
+        logger.error(f"LLM chat error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process chat request")
+
+
+async def get_security_context() -> str:
+    """Get current security context for AI"""
+    try:
+        # Get current alerts (mock data for now)
+        current_alerts = [
+            {
+                "id": "alert_001",
+                "title": "Suspicious Login Pattern Detected",
+                "severity": "critical",
+                "status": "open",
+                "event_type": "anomalous_login",
+                "user_id": "user_123",
+                "risk_score": 0.95
+            },
+            {
+                "id": "alert_002", 
+                "title": "Multiple Failed Login Attempts",
+                "severity": "high",
+                "status": "investigating",
+                "event_type": "brute_force",
+                "risk_score": 0.85
+            },
+            {
+                "id": "alert_003",
+                "title": "Unusual Data Access Pattern", 
+                "severity": "high",
+                "status": "open",
+                "event_type": "data_exfiltration",
+                "user_id": "user_789",
+                "risk_score": 0.88
+            }
+        ]
+        
+        # Get system statistics
+        total_alerts = len(current_alerts)
+        critical_high_alerts = len([a for a in current_alerts if a["severity"] in ["critical", "high"]])
+        open_alerts = len([a for a in current_alerts if a["status"] == "open"])
+        
+        # Get top threat types
+        threat_types = {}
+        for alert in current_alerts:
+            event_type = alert["event_type"]
+            threat_types[event_type] = threat_types.get(event_type, 0) + 1
+        
+        top_threats = sorted(threat_types.items(), key=lambda x: x[1], reverse=True)
+        
+        # Get recent user activity patterns
+        high_risk_users = [a["user_id"] for a in current_alerts if a.get("user_id") and a["risk_score"] > 0.8]
+        
+        context = f"""
+CURRENT SECURITY STATUS:
+- Total Active Alerts: {total_alerts}
+- Critical/High Severity: {critical_high_alerts}
+- Open Alerts Requiring Action: {open_alerts}
+
+TOP THREAT CATEGORIES:
+{chr(10).join([f"- {threat_type.replace('_', ' ').title()}: {count} alerts" for threat_type, count in top_threats[:3]])}
+
+HIGH-RISK USERS DETECTED:
+{chr(10).join([f"- {user_id}" for user_id in high_risk_users[:5]])}
+
+RECENT SECURITY EVENTS:
+- Anomalous login patterns from multiple geographic locations
+- Brute force attacks detected and partially mitigated  
+- Unusual data access volumes requiring investigation
+- Off-hours administrative access attempts
+
+SYSTEM CAPABILITIES:
+- Real-time threat detection using Redis Stack 8 with vector similarity
+- ML-based anomaly detection for user behavior
+- Geographic anomaly detection for impossible travel
+- API rate limiting and abuse detection
+- Automated IP reputation checking
+"""
+        
+        return context
+        
+    except Exception as e:
+        logger.error(f"Failed to get security context: {e}")
+        return "Security context temporarily unavailable."
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to process chat message: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process chat message")

@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Shield, Activity, Users, AlertTriangle, Database, Settings } from "lucide-react"
+import { Shield, Activity, Users, AlertTriangle, Database, Settings, Brain } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -63,6 +63,11 @@ const sidebarNavItems = [
     title: "Alerts",
     href: "/alerts",
     icon: AlertTriangle,
+  },
+  {
+    title: "AI Assistant",
+    href: "/ai",
+    icon: Brain,
   },
   {
     title: "Redis Monitor",
