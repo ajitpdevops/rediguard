@@ -5,6 +5,22 @@
 
 A cutting-edge **AI-powered** real-time security monitoring and threat detection system powered by **Redis 8** and **Large Language Models**. RediGuard combines advanced Redis data structures with machine learning and conversational AI to detect suspicious login patterns, anomalous behaviors, and potential security threats in real-time, while providing intelligent threat explanations and interactive security insights.
 
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │    Backend      │    │     Redis 8     │    │   LLM Service   │
+│   (Next.js)     │◄──►│   (FastAPI)     │◄──►│   (All Modules) │◄──►│   (Groq API)    │
+│                 │    │                 │    │                 │    │                 │
+│ - Dashboard     │    │ - API Routes    │    │ - Streams       │    │ - Threat Analysis│
+│ - Real-time UI  │    │ - AI Processing │    │ - TimeSeries    │    │ - Chat Interface│
+│ - AI Assistant  │    │ - Event Workers │    │ - Vector Search │    │ - Explanations  │
+│ - Chat Interface│    │ - LLM Service   │    │ - Bloom Filters │    │ - Risk Assessment│
+│ - Charts        │    │ - Threat Analysis│   │ - JSON Documents│    │ - Recommendations│
+└─────────────────┘    └─────────────────┘    │ - Search Index  │    └─────────────────┘
+                                              └─────────────────┘
+```
+
 ## 🎯 Overview
 
 RediGuard demonstrates how Redis 8's powerful features can be leveraged for AI-enhanced cybersecurity applications:
