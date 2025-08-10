@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     ai_model_type: str = "isolation_forest"
     contamination_rate: float = 0.1
     
+    # LLM Configuration
+    groq_api_key: str = ""
+    llm_api_key: str = ""
+    llm_provider: str = "groq"
+    llm_model: str = "llama3-8b-8192"
+    llm_base_url: str = "https://api.groq.com/openai/v1"
+    
     # Processing Configuration
     stream_consumer_group: str = "security_processors"
     stream_consumer_name: str = "processor_01"
